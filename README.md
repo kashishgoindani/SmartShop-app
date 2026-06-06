@@ -1,26 +1,22 @@
 # ShopSmart AI 🛒
 
-A full-stack AI-powered shop management system that helps shopkeepers manage their business efficiently.
-
-## Project Description
-
-ShopSmart AI is a smart shop management web application built with React, Node.js, MongoDB, and Groq AI. It allows shop owners to track sales, manage inventory, handle loans (udhaar), manage staff, and get real-time AI-powered insights — all in one place.
+ShopSmart AI is a smart shop management web application built with React, Node.js, Express, MongoDB, and Groq AI. It allows shop owners to track sales, manage inventory, handle loans (udhaar), manage staff, and get real-time AI-powered insights — all in one place.
 
 ---
 
-## Features
+## ✨ Features
 
-- 🔐 User Authentication (Register / Login with JWT)
-- 📊 Real-time Sales & Inventory Tracking
-- 🤝 Udhaar (Loan) Management with records
-- 👥 Staff Management & Access Control
-- 🤖 AI Chat Assistant (powered by Groq AI)
-- 📱 Responsive Design for all screen sizes
-- 🔄 Full CRUD operations on all modules
+- 🔐 **User Authentication** — Secure register/login with JWT
+- 📊 **Sales & Inventory Tracking** — Real-time dashboard for stock and sales
+- 🤝 **Udhaar (Loan) Management** — Keep records of all credit transactions
+- 👥 **Staff Management** — Add staff and control access levels
+- 🤖 **AI Chat Assistant** — Powered by Groq AI (LLaMA) for instant business insights
+- 📱 **Responsive Design** — Works seamlessly across all screen sizes
+- 🔄 **Full CRUD** — Complete create, read, update, delete on all modules
 
 ---
 
-## Technologies Used
+## 🛠️ Technologies Used
 
 **Frontend:**
 - React JS (Vite)
@@ -44,111 +40,75 @@ ShopSmart AI is a smart shop management web application built with React, Node.j
 
 ---
 
-## Frontend Setup
+## ⚙️ Environment Variables
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+Create a `.env` file in the `backend` folder:
 
----
-
-## Backend Setup
-
-```bash
-cd backend
-npm install
-npm run dev
-```
-
----
-
-## Database Setup
-
-1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/atlas)
-2. Create a new cluster
-3. Get your connection string
-4. Add it to your `.env` file as `MONGO_URI`
-
----
-
-## Environment Variables
-
-Create a `.env` file in the `backend` folder with the following:
-
-```
-MONGO_URI=your_mongodb_atlas_connection_string
+```env
+MONGO_URI=mongodb://localhost:27017/your_db_name
 JWT_SECRET=your_jwt_secret_key
 PORT=5000
 GROQ_API_KEY=your_groq_api_key
 ```
 
-Create a `.env` file in the `frontend` folder with the following:
+Create a `.env` file in the `frontend` folder:
 
-```
+```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-See `.env.example` files in both folders for reference.
+> See `.env.example` files in both folders for reference.
 
 ---
 
-## Step-by-Step Instructions to Run the Project
+## 🗄️ Database Setup
 
-1. Clone the repository:
+1. Download and install [MongoDB Compass](https://www.mongodb.com/try/download/compass)
+2. Open Compass and connect using: `mongodb://localhost:27017`
+3. Create a new database
+4. Add your connection string to `backend/.env` as `MONGO_URI`
+
+---
+
+## 🚀 Step-by-Step Instructions to Run the Project
+
+### 1. Clone the Repository
+
 ```bash
-git clone https://github.com/kashishgoindani/shopsmart-ai.git
-cd shopsmart-ai
+git clone https://github.com/kashishgoindani/SmartShop-app.git
+cd SmartShop-app
 ```
 
-2. Setup Backend:
+### 2. Backend Setup
+
 ```bash
 cd backend
 npm install
-# Create .env file and add your environment variables
-npm run dev
 ```
 
-3. Setup Frontend:
+Create a `.env` file and add your environment variables, then:
+
+```bash
+node server.js
+```
+
+### 3. Frontend Setup
+
 ```bash
 cd frontend
 npm install
-# Create .env file and add VITE_API_URL
+```
+
+Create a `.env` file and add your environment variables, then:
+
+```bash
 npm run dev
 ```
 
-4. Open browser and go to `http://localhost:5173`
+### 4. Open your browser and go to `http://localhost:5173`
 
 ---
 
-## Deployment
+## 🌐 Live Demo
 
-- **Frontend:** Deployed on [Vercel](https://shopsmart-ai-app.vercel.app)
-- **Backend:** Deployed on [Vercel](https://shopsmart-ai-5kga.vercel.app)
-- **Database:** MongoDB Atlas
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | /api/auth/register | Register new user |
-| POST | /api/auth/login | Login user |
-| GET | /api/products | Get all products |
-| POST | /api/products | Add new product |
-| PUT | /api/products/:id | Update product |
-| DELETE | /api/products/:id | Delete product |
-| GET | /api/sales | Get all sales |
-| POST | /api/sales | Add new sale |
-| GET | /api/staff | Get all staff |
-| POST | /api/staff | Add new staff |
-| GET | /api/udhaar | Get all udhaar records |
-| POST | /api/udhaar | Add new udhaar |
-
----
-
-## Git Repository
-
-[https://github.com/kashishgoindani/shopsmart-ai](https://github.com/kashishgoindani/shopsmart-ai)
+[https://smart-shop-app.vercel.app](https://smart-shop-app.vercel.app)
