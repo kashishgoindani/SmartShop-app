@@ -1,3 +1,12 @@
+---
+title: Shopsmart AI Backend
+emoji: 🛒
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # ShopSmart AI 🛒
 
 ShopSmart AI is a smart shop management web application built with React, Node.js, Express, MongoDB, and Groq AI. It allows shop owners to track sales, manage inventory, handle loans (udhaar), manage staff, and get real-time AI-powered insights — all in one place.
