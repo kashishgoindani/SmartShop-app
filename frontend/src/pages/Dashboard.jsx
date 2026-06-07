@@ -42,7 +42,6 @@ function StatCard({ label, value, icon, color, prefix = '', loading }) {
   );
 }
 
-// ✅ Real-time Sales Graph Component
 function SalesGraph({ salesData }) {
   const canvasRef = useRef(null);
 
@@ -61,7 +60,6 @@ function SalesGraph({ salesData }) {
     const xStep = (W - pad.left - pad.right) / Math.max(steps - 1, 1);
     const yScale = (H - pad.top - pad.bottom) / maxVal;
 
-    // Grid lines
     for (let i = 0; i <= 4; i++) {
       const y = pad.top + ((H - pad.top - pad.bottom) / 4) * i;
       ctx.beginPath();
@@ -70,16 +68,15 @@ function SalesGraph({ salesData }) {
       ctx.moveTo(pad.left, y);
       ctx.lineTo(W - pad.right, y);
       ctx.stroke();
-      // Y labels
       const val = Math.round(maxVal - (maxVal / 4) * i);
       ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.font = '10px Inter, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(val >= 1000 ? `${(val/1000).toFixed(0)}k` : val, pad.left - 6, y + 4);
+      ctx.fillText(val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val, pad.left - 6, y + 4);
     }
 
-    // X labels
     salesData.forEach((d, i) => {
+      if (!d.label) return;
       const x = pad.left + i * xStep;
       ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.font = '9px Inter, sans-serif';
@@ -87,7 +84,6 @@ function SalesGraph({ salesData }) {
       ctx.fillText(d.label, x, H - 8);
     });
 
-    // Gradient fill
     const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
     grad.addColorStop(0, 'rgba(99,102,241,0.35)');
     grad.addColorStop(1, 'rgba(99,102,241,0.01)');
@@ -103,7 +99,6 @@ function SalesGraph({ salesData }) {
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Line
     ctx.beginPath();
     ctx.strokeStyle = '#6366F1';
     ctx.lineWidth = 2.5;
@@ -115,7 +110,6 @@ function SalesGraph({ salesData }) {
     });
     ctx.stroke();
 
-    // Dots
     salesData.forEach((d, i) => {
       const x = pad.left + i * xStep;
       const y = H - pad.bottom - d.amount * yScale;
@@ -128,13 +122,12 @@ function SalesGraph({ salesData }) {
       ctx.fillStyle = '#fff';
       ctx.fill();
     });
-
   }, [salesData]);
 
   if (!salesData.length) return (
     <div style={{ padding: '40px', textAlign: 'center' }}>
       <p style={{ fontSize: '32px', margin: '0 0 8px' }}>📊</p>
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>No sales data yet today</p>
+      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>No sales data yet</p>
     </div>
   );
 
@@ -156,7 +149,9 @@ function Dashboard() {
   });
   const [recentSales, setRecentSales] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
-  const [salesGraphData, setSalesGraphData] = useState([]);  // ✅ graph data
+  const [salesGraphData, setSalesGraphData] = useState([]);
+  const [allSalesData, setAllSalesData] = useState([]);
+  const [graphFilter, setGraphFilter] = useState('today');
   const [loading, setLoading] = useState(true);
 
   const getGreeting = () => {
@@ -166,28 +161,72 @@ function Dashboard() {
     return 'Good Evening';
   };
 
-  // ✅ Today ki sales ko hourly buckets mein group karo
-  const buildGraphData = (sales) => {
+  const buildGraphData = (sales, filter) => {
     const now = new Date();
-    const currentHour = now.getHours();
-    const buckets = {};
 
-    // Sirf last 8 ghante dikhao
-    for (let i = 7; i >= 0; i--) {
-      const h = currentHour - i;
-      if (h < 0) continue;
-      const label = `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}`;
-      buckets[h] = { label, amount: 0 };
+    if (filter === 'today') {
+      const currentHour = now.getHours();
+      const buckets = {};
+      for (let i = 7; i >= 0; i--) {
+        const h = currentHour - i;
+        if (h < 0) continue;
+        const label = `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}`;
+        buckets[h] = { label, amount: 0 };
+      }
+      sales.forEach(s => {
+        const h = new Date(s.createdAt).getHours();
+        if (buckets[h] !== undefined) buckets[h].amount += s.totalAmount || 0;
+      });
+      return Object.values(buckets);
     }
 
-    sales.forEach(s => {
-      const h = new Date(s.createdAt).getHours();
-      if (buckets[h] !== undefined) {
-        buckets[h].amount += s.totalAmount || 0;
+    if (filter === 'week') {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const buckets = {};
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const key = d.toDateString();
+        buckets[key] = { label: days[d.getDay()], amount: 0 };
       }
-    });
+      sales.forEach(s => {
+        const key = new Date(s.createdAt).toDateString();
+        if (buckets[key] !== undefined) buckets[key].amount += s.totalAmount || 0;
+      });
+      return Object.values(buckets);
+    }
 
-    return Object.values(buckets);
+    if (filter === 'month') {
+      const buckets = {};
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const key = d.toDateString();
+        buckets[key] = { label: `${d.getDate()}/${d.getMonth() + 1}`, amount: 0 };
+      }
+      sales.forEach(s => {
+        const key = new Date(s.createdAt).toDateString();
+        if (buckets[key] !== undefined) buckets[key].amount += s.totalAmount || 0;
+      });
+      return Object.values(buckets).map((b, i) => ({
+        ...b, label: i % 5 === 0 ? b.label : ''
+      }));
+    }
+
+    if (filter === 'year') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const buckets = {};
+      months.forEach((m, i) => { buckets[i] = { label: m, amount: 0 }; });
+      sales.forEach(s => {
+        const date = new Date(s.createdAt);
+        if (date.getFullYear() === now.getFullYear()) {
+          buckets[date.getMonth()].amount += s.totalAmount || 0;
+        }
+      });
+      return Object.values(buckets);
+    }
+
+    return [];
   };
 
   const fetchData = async () => {
@@ -206,7 +245,8 @@ function Dashboard() {
         const revenue = todaySales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
         setStats(prev => ({ ...prev, todayRevenue: revenue, todayOrders: todaySales.length }));
         setRecentSales(todaySales.slice(0, 5));
-        setSalesGraphData(buildGraphData(todaySales));  // ✅ graph update
+        setAllSalesData(allSales);
+        setSalesGraphData(buildGraphData(allSales, graphFilter));
       }
 
       if (productsRes.status === 'fulfilled') {
@@ -231,10 +271,14 @@ function Dashboard() {
 
   useEffect(() => {
     fetchData();
-    // ✅ Har 30 second mein auto refresh — real-time feel
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // ✅ Filter change hone pe graph update
+  useEffect(() => {
+    setSalesGraphData(buildGraphData(allSalesData, graphFilter));
+  }, [graphFilter, allSalesData]);
 
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -246,6 +290,7 @@ function Dashboard() {
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
         .dash-fade { animation: fadeIn 0.4s ease forwards; }
+        .filter-btn:hover { opacity: 0.85; }
       `}</style>
 
       {/* Header */}
@@ -280,22 +325,38 @@ function Dashboard() {
         <StatCard label="Pending Loans"   value={stats.pendingUdhaar} icon="📋" color="#f59e0b" prefix="₨ " loading={loading} />
       </div>
 
-      {/* ✅ Sales Graph — full width */}
+      {/* Sales Graph */}
       <div className="dash-fade" style={{
         background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.08)',
         borderRadius: '16px', overflow: 'hidden', marginBottom: '20px', animationDelay: '0.15s'
       }}>
+        {/* Graph Header with Filters */}
         <div style={{
           padding: '18px 22px', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px'
         }}>
-          <h3 style={{ color: '#fff', fontSize: '15px', fontWeight: 600, margin: 0 }}>📊 Today's Sales Graph</h3>
-          <span style={{
-            fontSize: '11px', padding: '4px 10px',
-            background: 'rgba(99,102,241,0.15)', color: '#6366F1',
-            border: '0.5px solid rgba(99,102,241,0.25)', borderRadius: '20px', fontWeight: 500
-          }}>Live • updates every 30s</span>
+          <h3 style={{ color: '#fff', fontSize: '15px', fontWeight: 600, margin: 0 }}>📊 Sales Graph</h3>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            {['today', 'week', 'month', 'year'].map(f => (
+              <button key={f} className="filter-btn" onClick={() => setGraphFilter(f)} style={{
+                padding: '5px 14px', borderRadius: '20px', cursor: 'pointer',
+                fontSize: '12px', fontWeight: 500, transition: 'all 0.2s',
+                fontFamily: 'Inter, sans-serif',
+                background: graphFilter === f ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.04)',
+                color: graphFilter === f ? '#818cf8' : 'rgba(255,255,255,0.4)',
+                border: graphFilter === f ? '0.5px solid rgba(99,102,241,0.4)' : '0.5px solid rgba(255,255,255,0.08)',
+              }}>
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+            <span style={{
+              fontSize: '11px', padding: '4px 10px', marginLeft: '4px',
+              background: 'rgba(99,102,241,0.15)', color: '#6366F1',
+              border: '0.5px solid rgba(99,102,241,0.25)', borderRadius: '20px', fontWeight: 500
+            }}>Live • 30s</span>
+          </div>
         </div>
+
         <div style={{ padding: '16px 22px 8px' }}>
           {loading ? (
             <div style={{ height: '200px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', animation: 'pulse 1.5s infinite' }} />
@@ -327,7 +388,7 @@ function Dashboard() {
 
           {loading ? (
             <div style={{ padding: '22px' }}>
-              {[1,2,3].map(i => (
+              {[1, 2, 3].map(i => (
                 <div key={i} style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
                   <div style={{ flex: 1, height: '14px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
                   <div style={{ width: '80px', height: '14px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
@@ -394,7 +455,7 @@ function Dashboard() {
 
           {loading ? (
             <div style={{ padding: '22px' }}>
-              {[1,2,3].map(i => (
+              {[1, 2, 3].map(i => (
                 <div key={i} style={{ display: 'flex', gap: '12px', marginBottom: '14px', alignItems: 'center' }}>
                   <div style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
                   <div style={{ flex: 1, height: '14px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
