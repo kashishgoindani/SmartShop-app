@@ -4,10 +4,12 @@ import toast from 'react-hot-toast';
 
 const SUGGESTIONS = [
   'Aaj kitni sales hui?',
+  'Surf Excel ka stock kitna hai?',
   'Kaunse products low stock mein hain?',
   'Total pending udhaar kitna hai?',
-  'Mujhe aaj ka summary do',
+  'Staff ki salaries batao',
   'Kaunsa product best seller hai?',
+  'Is hafte ki revenue kya rahi?',
   'Udhaar customers ki list do',
 ];
 
@@ -28,10 +30,7 @@ function TypingDots() {
 function ShopDataCard({ data }) {
   if (!data) return null;
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px',
-      marginTop: '10px'
-    }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '10px' }}>
       {[
         { label: "Today's Revenue", value: `₨ ${(data.totalRevenue || 0).toLocaleString()}`, color: '#10b981', icon: '💰' },
         { label: "Today's Sales",   value: data.todaySales || 0, color: '#6366F1', icon: '🛍️' },
@@ -56,7 +55,7 @@ function AiChat() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Assalam o Alaikum! 👋 Main ShopSmart AI hun — aapki dukaan ka smart assistant. Aaj main aapki kya madad kar sakta hun?\n\nAap mujhse sales, stock, udhaar, ya kisi bhi cheez ke baare mein pooch sakte hain.',
+      content: 'Assalam o Alaikum! 👋 Main ShopSmart AI hun — aapki dukaan ka smart assistant.\n\nAap mujhse kisi bhi product ka stock, price, staff ki salary, udhaar, ya sales ke baare mein pooch sakte hain. Main sab kuch janta hun! 😊',
       time: new Date(),
     }
   ]);
@@ -75,12 +74,23 @@ function AiChat() {
     if (!msg) return;
 
     const userMsg = { role: 'user', content: msg, time: new Date() };
-    setMessages(prev => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInput('');
     setLoading(true);
 
     try {
-      const { data } = await API.post('/ai/chat', { message: msg });
+      // History bhejo — errors exclude karo, last 20 tak
+      const historyToSend = updatedMessages
+        .filter(m => !m.isError)
+        .slice(-21, -1) // current message exclude, last 20
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const { data } = await API.post('/ai/chat', {
+        message: msg,
+        history: historyToSend
+      });
+
       setShopData(data.shopData);
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -126,7 +136,6 @@ function AiChat() {
       <style>{`
         @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         .fade { animation: fadeIn 0.3s ease forwards; }
         .suggestion:hover { background: rgba(99,102,241,0.15) !important; border-color: rgba(99,102,241,0.4) !important; color: #818cf8 !important; }
         .send-btn:hover { opacity: 0.85; transform: scale(1.04); }
@@ -160,9 +169,7 @@ function AiChat() {
 
       {/* Live Stats Bar */}
       {shopData && (
-        <div className="fade" style={{
-          display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', flexShrink: 0
-        }}>
+        <div className="fade" style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', flexShrink: 0 }}>
           {[
             { label: "Revenue", value: `₨ ${(shopData.totalRevenue || 0).toLocaleString()}`, color: '#10b981', icon: '💰' },
             { label: "Sales",   value: shopData.todaySales || 0, color: '#6366F1', icon: '🛍️' },
@@ -198,7 +205,6 @@ function AiChat() {
               display: 'flex', flexDirection: isAI ? 'row' : 'row-reverse',
               gap: '10px', alignItems: 'flex-start'
             }}>
-              {/* Avatar */}
               <div style={{
                 width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
                 background: isAI ? 'linear-gradient(135deg,#6366F1,#8B5CF6)' : 'rgba(255,255,255,0.1)',
@@ -206,7 +212,6 @@ function AiChat() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px'
               }}>{isAI ? '🤖' : '👤'}</div>
 
-              {/* Bubble */}
               <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: isAI ? 'flex-start' : 'flex-end' }}>
                 <div style={{
                   padding: '12px 16px', borderRadius: isAI ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
@@ -216,14 +221,12 @@ function AiChat() {
                   border: isAI
                     ? `0.5px solid ${msg.isError ? 'rgba(239,68,68,0.2)' : 'rgba(99,102,241,0.2)'}`
                     : 'none',
-                  color: '#fff',
-                  fontSize: '14px', lineHeight: 1.65,
+                  color: '#fff', fontSize: '14px', lineHeight: 1.65,
                   whiteSpace: 'pre-wrap', wordBreak: 'break-word'
                 }}>
                   {msg.content}
                 </div>
 
-                {/* Show shop data card for first AI response with data */}
                 {isAI && msg.shopData && i === messages.length - 1 && (
                   <div style={{ width: '100%', maxWidth: '380px' }}>
                     <ShopDataCard data={msg.shopData} />
@@ -238,7 +241,6 @@ function AiChat() {
           );
         })}
 
-        {/* Typing indicator */}
         {loading && (
           <div className="fade" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
             <div style={{
@@ -272,9 +274,7 @@ function AiChat() {
       )}
 
       {/* Input Area */}
-      <div className="fade" style={{
-        display: 'flex', gap: '10px', alignItems: 'flex-end', flexShrink: 0
-      }}>
+      <div className="fade" style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexShrink: 0 }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <textarea
             ref={inputRef}
@@ -285,7 +285,7 @@ function AiChat() {
             onKeyDown={handleKey}
             rows={1}
             style={{
-              width: '100%', padding: '13px 16px', paddingRight: '50px',
+              width: '100%', padding: '13px 16px',
               background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.12)',
               borderRadius: '12px', color: '#fff', fontSize: '14px',
               fontFamily: 'Inter,sans-serif', outline: 'none', resize: 'none',
