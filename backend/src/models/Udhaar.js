@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const udhaarSchema = new mongoose.Schema({
+  shopId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   customerName:  { type: String, required: true },
   customerPhone: { type: String, required: false, default: '' },  // ✅ required hata diya
   amount:        { type: Number, required: true },
