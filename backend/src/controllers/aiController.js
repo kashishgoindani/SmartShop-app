@@ -10,23 +10,22 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const chat = async (req, res) => {
   try {
     const { message, history = [] } = req.body;
+    const shopId = req.user.id;
 
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
     const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30);
 
-    // ── SALES ──────────────────────────────────────────────
     const [todaySales, weeklySales, monthlySales] = await Promise.all([
-      Sale.find({ createdAt: { $gte: today } }).populate('items.product soldBy'),
-      Sale.find({ createdAt: { $gte: weekAgo } }).populate('items.product soldBy'),
-      Sale.find({ createdAt: { $gte: monthAgo } }).populate('items.product soldBy'),
+      Sale.find({ shopId, createdAt: { $gte: today } }).populate('items.product soldBy'),
+      Sale.find({ shopId, createdAt: { $gte: weekAgo } }).populate('items.product soldBy'),
+      Sale.find({ shopId, createdAt: { $gte: monthAgo } }).populate('items.product soldBy'),
     ]);
 
     const todayRevenue = todaySales.reduce((s, x) => s + x.totalAmount, 0);
     const weekRevenue  = weeklySales.reduce((s, x) => s + x.totalAmount, 0);
     const monthRevenue = monthlySales.reduce((s, x) => s + x.totalAmount, 0);
 
-    // Product-wise units sold (weekly)
     const productUnits = {};
     weeklySales.forEach(sale => {
       sale.items?.forEach(item => {
@@ -38,14 +37,12 @@ const chat = async (req, res) => {
     const bestSeller  = sortedProducts[0];
     const worstSeller = sortedProducts[sortedProducts.length - 1];
 
-    // Staff-wise sales (weekly)
     const staffSales = {};
     weeklySales.forEach(sale => {
       const name = sale.soldBy?.name || 'Unknown';
       staffSales[name] = (staffSales[name] || 0) + sale.totalAmount;
     });
 
-    // Customer frequency (monthly)
     const customerFreq = {};
     monthlySales.forEach(sale => {
       if (sale.customer) {
@@ -56,25 +53,21 @@ const chat = async (req, res) => {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
 
-    // ── PRODUCTS ───────────────────────────────────────────
-    const allProducts = await Product.find({});
+    const allProducts = await Product.find({ shopId });
     const lowStock    = allProducts.filter(p => p.stock > 0 && p.stock <= (p.lowStockThreshold || 5));
     const outOfStock  = allProducts.filter(p => p.stock === 0);
     const inStock     = allProducts.filter(p => p.stock > (p.lowStockThreshold || 5));
 
-    // ── UDHAAR ─────────────────────────────────────────────
-    const allUdhaar      = await Udhaar.find({});
+    const allUdhaar      = await Udhaar.find({ shopId });
     const pendingUdhaar  = allUdhaar.filter(u => u.status !== 'paid');
     const paidUdhaar     = allUdhaar.filter(u => u.status === 'paid');
     const totalPending   = pendingUdhaar.reduce((s, u) => s + (u.amount - u.paidAmount), 0);
     const totalRecovered = paidUdhaar.reduce((s, u) => s + u.amount, 0);
 
-    // ── STAFF ──────────────────────────────────────────────
-    const staffList       = await Staff.find({});
+    const staffList       = await Staff.find({ shopId });
     const activeStaff     = staffList.filter(s => s.isActive);
     const totalSalaryBill = activeStaff.reduce((s, x) => s + (x.salary || 0), 0);
 
-    // ── SYSTEM PROMPT ──────────────────────────────────────
     const systemPrompt = `Aap ShopSmart AI hain — ek Pakistani dukaan ka real-time smart assistant.
 Hamesha Roman Urdu mein jawab do. Friendly, concise aur helpful raho.
 Specific cheez poochi ho toh exact data do. Calculations clearly dikhao.
@@ -155,7 +148,6 @@ ${topCustomers.length
   ? topCustomers.map(([name, visits]) => `  - ${name}: ${visits} baar aya`).join('\n')
   : '  Customer data nahi hai'}`;
 
-    // ── GROQ CALL ──────────────────────────────────────────
     const conversationHistory = history
       .filter(m => m.role === 'user' || m.role === 'assistant')
       .slice(-20)
